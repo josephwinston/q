@@ -1,95 +1,85 @@
-# q - Text as a Database 
-q allows direct SQL-like queries on text files, including joins and any other SQL construct, and supports automatic detection of column types and names.
+# q - Text as Data
+q is a command line tool that allows direct execution of SQL-like queries on CSVs/TSVs (and any other tabular text files).
 
-## Overview
-Have you ever stared at a text file on the screen, hoping it would have been a database so you could ask anything you want about it? I had that feeling many times, and I've finally understood that it's not the _database_ that I want. It's the language - SQL.
+q treats ordinary files as database tables, and supports all SQL constructs, such as WHERE, GROUP BY, JOINs etc. It supports automatic column name and column type detection, and provides full support for multiple encodings.
 
-SQL is a declarative language for data, and as such it allows me to define what I want without caring about how exactly it's done. This is the reason SQL is so powerful, because it treats data as data and not as bits and bytes (and chars).
+q's web site is [http://harelba.github.io/q/](http://harelba.github.io/q/). It contains everything you need to download and use q in no time.
 
-The goal of this tool is to provide a bridge between the world of text files and of SQL.
+## Download
+Download links for all OSs are [here](http://harelba.github.io/q/install.html). 
 
+## Examples
+A beginner's tutorial can be found [here](examples/EXAMPLES.markdown).
 
+__Example 1:__
+
+    q -H -t "select count(distinct(uuid)) from ./clicks.csv"
+    
+__Output 1:__
 ```bash
-"q allows performing SQL-like statements on tabular text data, including joins and subqueries"
+229
 ```
 
-You can use this [gitter chat room](https://gitter.im/harelba/q) for contacting me directly. I'm trying to be available at the chat room as much as possible.
+__Example 2:__
 
-## Highlights
+    q -H -t "select request_id,score from ./clicks.csv where score > 0.7 order by score desc limit 5"
 
-* Seamless multi-table SQL support, including joins. filenames are just used instead of table names (use - for stdin)
-* Automatic column name and column type detection (Allows working more naturally with the data)
-* Multiple parsing modes - relaxed and strict. Relaxed mode allows to easily parse semi-structured data, such as log files.
-* Standard installation - RPM, Homebrew (Mac). Debian package coming soon.
-* Support for quoted fields 
-* Full UTF-8 support (and other encodings)
-* Handling of gzipped files
-* Output delimiter matching and selection
-* Output beautifier
-* man page when installed through the RPM package
+__Output 2:__
+```bash
+2cfab5ceca922a1a2179dc4687a3b26e	1.0
+f6de737b5aa2c46a3db3208413a54d64	0.986665809568
+766025d25479b95a224bd614141feee5	0.977105183282
+2c09058a1b82c6dbcf9dc463e73eddd2	0.703255121794
+```
 
-## Examples and Tutorial
-Quick usage example: ```sudo find /tmp -ls | q "select c5,c6,sum(c7)/1024.0/1024 as total from - group by c5,c6 order by total desc"```
+__Example 3:__
 
-Full examples and a beginner's tutorial can be found [here](EXAMPLES.markdown)
+    q -t -H "select strftime('%H:%M',date_time) hour_and_minute,count(*) from ./clicks.csv group by hour_and_minute"
 
-## Installation
-Current stable version is `1.3.0`. 
+__Output 3:__
+```bash
+07:00	138148
+07:01	140026
+07:02	121826
+```
 
-No special requirements other than python >= 2.5 are needed.
+__Usage Example 4:__
 
-### Mac Users
-Just run `brew install q`. 
+    q -t -H "select hashed_source_machine,count(*) from ./clicks.csv group by hashed_source_machine"
+    
+__Output 4:__
+```bash
+47d9087db433b9ba.domain.com	400000
+```
 
-Thanks @stuartcarnie for the initial homebrew formula
+__Example 5 (total size per user/group in the /tmp subtree):__
 
-### Manual installation (very simple, since there are no dependencies)
+    sudo find /tmp -ls | q "select c5,c6,sum(c7)/1024.0/1024 as total from - group by c5,c6 order by total desc"
 
-1. Download the main q executable from **[here](https://raw.github.com/harelba/q/1.3.0/q)** into a folder in the PATH.
-2. Make the file executable.
+__Output 5:__
+```bash
+mapred hadoop   304.00390625
+root   root     8.0431451797485
+smith  smith    4.34389972687
+```
 
-For `Windows` machines, also download q.bat **[here](https://raw.github.com/harelba/q/1.3.0/q.bat)** into the same folder and use it to run q.
+__Example 6 (top 3 user ids with the largest number of owned processes, sorted in descending order):__
 
-### RPM-Base Linux distributions
-Download the RPM here **[here](https://github.com/harelba/packages-for-q/raw/master/rpms/q-1.3.0-1.noarch.rpm)**. 
+Note the usage of the autodetected column name UID in the query.
 
-Install using `rpm -ivh <rpm-name>`.
-
-RPM Releases also contain a man page. Just enter `man q`.
-
-### Debian-based Linux distributions
-Debian packaing is in progress. In the mean time install manually. See the section below.
-
-## Usage
-q's basic usage is very simple:`q <flags> <query>`, but it has lots of features under the hood and in the flags that can be passed to the command.
-
-Simplest execution is q "SELECT * FROM myfile" which prints the entire file.
-
-Complete information can be found [here](USAGE.markdown)
-
-## Implementation
-Some implementation details can be found [here](IMPLEMENTATION.markdown)
-
-## Limitations
-* No checks and bounds on data size
-* Spaces in file names are not supported yet. I'm working on it.
-
-## Future Ideas
-* Faster reuse of previous data loading
-* Allow working with external DB
-* Real parsing of the SQL, allowing smarter execution of queries.
-* Smarter batch insertion to the database
-* Full Subquery support (will be possible once real SQL parsing is performed)
-* Provide mechanisms beyond SELECT - INSERT and CREATE TABLE SELECT and such.
-
-## Rationale
-Some information regarding the rationale for this tool and related philosophy can be found [here](RATIONALE.markdown)
-
-## Change log
-History of changes can be found [here](CHANGELOG.markdown)
+    ps -ef | q -H "select UID,count(*) cnt from - group by UID order by cnt desc limit 3"
+    
+__Output 6:__
+```bash
+root 152
+harel 119
+avahi 2
+```
 
 ## Contact
 Any feedback/suggestions/complaints regarding this tool would be much appreciated. Contributions are most welcome as well, of course.
 
 Harel Ben-Attia, harelba@gmail.com, [@harelba](https://twitter.com/harelba) on Twitter
+
+q on twitter: #qtextasdata
 
